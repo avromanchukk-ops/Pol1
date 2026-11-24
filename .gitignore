@@ -1,0 +1,7 @@
+.gradle/
+build/
+android/app/src/main/assets/
+android/local.properties
+fonts/
+web/index.html
+*.apk

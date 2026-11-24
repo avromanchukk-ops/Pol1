@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'ua.polytsia.app'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ua.polytsia.app'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    applicationVariants.all { variant ->
+        variant.outputs.all { outputFileName = "Polytsia.apk" }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Копіює зібраний веб-інтерфейс в assets перед кожною збіркою
+tasks.register('copyWebApp', Copy) {
+    from("${rootDir}/../web/index.html")
+    into("${projectDir}/src/main/assets")
+}
+preBuild.dependsOn copyWebApp
