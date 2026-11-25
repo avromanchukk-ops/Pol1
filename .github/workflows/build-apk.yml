@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.11.1' }
       - name: Build web UI
@@ -38,3 +38,4 @@ jobs:
         run: |
           { echo '```'; tail -n 120 build.log 2>/dev/null || echo 'no build.log'; echo '```'; } > fail.md
           gh issue create --title "Build ${{ github.run_number }} failed" --body-file fail.md
+ 
