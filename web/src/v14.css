@@ -1,0 +1,14 @@
+/* v1.4: мова описів */
+.dd-act{align-items:center}
+.dl-seg{margin-left:auto;display:flex;padding:2px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.dl-seg button{height:24px;padding:0 9px;border-radius:10px;font-size:11px;font-weight:800;color:var(--dim);letter-spacing:.03em}
+.dl-seg button.on{background:var(--grad);color:#fff}
+.tr-note{display:none;align-items:center;gap:6px;font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px}
+.tr-note svg{width:13px;height:13px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.det-desc.tr-wait .tr-note{display:flex}
+.det-desc.tr-wait p{opacity:.45}
+.dl-big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dl-big button{padding:12px;border-radius:16px;background:var(--bg2);border:1.5px solid var(--line);text-align:left}
+.dl-big b{display:block;font-size:14.5px}.dl-big span{font-size:12px;color:var(--muted)}
+.dl-big button.on{border-color:var(--accent);background:linear-gradient(135deg,rgba(255,138,61,.14),transparent),var(--bg2)}
