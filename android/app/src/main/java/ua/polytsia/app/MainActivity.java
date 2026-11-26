@@ -16,6 +16,7 @@ import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -44,6 +45,7 @@ public class MainActivity extends Activity {
     private static final int FILE_REQ = 42;
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
+    private Uri cameraUri;
     private final ExecutorService pool = Executors.newFixedThreadPool(4);
     private final Handler ui = new Handler(Looper.getMainLooper());
 
@@ -95,11 +97,26 @@ public class MainActivity extends Activity {
             public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams params) {
                 if (fileCb != null) fileCb.onReceiveValue(null);
                 fileCb = cb;
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("*/*");
-                try { startActivityForResult(Intent.createChooser(i, "Файл резервної копії"), FILE_REQ); }
-                catch (ActivityNotFoundException e) { fileCb = null; return false; }
+                cameraUri = null;
+                boolean image = false;
+                for (String t : params.getAcceptTypes()) if (t != null && t.startsWith("image")) image = true;
+                try {
+                    if (image) {
+                        if (params.isCaptureEnabled()) {
+                            Intent cam = cameraIntent();
+                            if (cam != null) { startActivityForResult(cam, FILE_REQ); return true; }
+                        }
+                        Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                        pick.addCategory(Intent.CATEGORY_OPENABLE);
+                        pick.setType("image/*");
+                        startActivityForResult(Intent.createChooser(pick, "Оберіть фото"), FILE_REQ);
+                        return true;
+                    }
+                    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    startActivityForResult(Intent.createChooser(i, "Файл резервної копії"), FILE_REQ);
+                } catch (ActivityNotFoundException e) { fileCb = null; return false; }
                 return true;
             }
         });
@@ -125,7 +142,15 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == FILE_REQ && fileCb != null) {
-            Uri[] r = (res == RESULT_OK && data != null && data.getData() != null) ? new Uri[]{data.getData()} : null;
+            Uri[] r = null;
+            if (res == RESULT_OK) {
+                if (data != null && data.getData() != null) r = new Uri[]{data.getData()};
+                else if (cameraUri != null) {
+                    File f = new File(PhotoProvider.dir(this), cameraUri.getLastPathSegment());
+                    if (f.exists() && f.length() > 0) r = new Uri[]{cameraUri};
+                }
+            }
+            cameraUri = null;
             fileCb.onReceiveValue(r);
             fileCb = null;
         }
@@ -133,6 +158,22 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() { pool.shutdownNow(); web.destroy(); super.onDestroy(); }
+
+    /** Інтент камери: знімок пишеться в кеш через PhotoProvider. Старі знімки прибираємо. */
+    private Intent cameraIntent() {
+        Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (cam.resolveActivity(getPackageManager()) == null) return null;
+        File d = PhotoProvider.dir(this);
+        File[] old = d.listFiles();
+        if (old != null) for (File f : old) if (System.currentTimeMillis() - f.lastModified() > 600000) f.delete();
+        String name = "cam_" + System.currentTimeMillis() + ".jpg";
+        try { new File(d, name).createNewFile(); } catch (Exception ignored) {}
+        cameraUri = Uri.parse("content://" + PhotoProvider.AUTH + "/" + name);
+        cam.putExtra(MediaStore.EXTRA_OUTPUT, cameraUri);
+        cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        cam.setClipData(android.content.ClipData.newRawUri("photo", cameraUri));
+        return cam;
+    }
 
     private void openExternal(String url) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
@@ -192,6 +233,14 @@ public class MainActivity extends Activity {
                 i.setType("text/plain");
                 i.putExtra(Intent.EXTRA_TEXT, text);
                 startActivity(Intent.createChooser(i, "Поділитися"));
+            });
+        }
+
+        @JavascriptInterface
+        public void keepAwake(boolean on) {
+            ui.post(() -> {
+                if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
         }
 
